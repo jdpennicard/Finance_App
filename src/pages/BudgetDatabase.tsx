@@ -63,8 +63,14 @@ const sortDirections = {
   desc: 'desc',
 };
 
+// Helper to get dropdown values as strings
+function getDropdownValues(options, name) {
+  const found = options.find(opt => opt.name === name);
+  return found ? found.values.filter(v => !v.archived).map(v => v.value) : [];
+}
+
 export default function BudgetDatabase() {
-  const { options } = useDropdownOptions();
+  const { options: dropdownOptions } = useDropdownOptions();
   const [rows, setRows] = useState<BudgetRow[]>(initialRows);
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
@@ -100,7 +106,7 @@ export default function BudgetDatabase() {
   const [bulkIndexIdValues, setBulkIndexIdValues] = useState<{ [oldId: number]: string }>({});
   const [bulkIndexIdError, setBulkIndexIdError] = useState<string | null>(null);
 
-  const getDropdown = (name: string) => options.find(opt => opt.name === name)?.values || [];
+  const getDropdown = (name: string) => dropdownOptions.find(opt => opt.name === name)?.values || [];
 
   const handleChange = (idx: number, field: string, value: string) => {
     setRows(rows =>
@@ -608,13 +614,13 @@ export default function BudgetDatabase() {
       <div className="mb-2 flex flex-wrap gap-2 items-center">
         <SearchableDropdown
           value={filters.budgetLineItem}
-          options={getDropdown('Budget Line Item')}
+          options={getDropdownValues(dropdownOptions, 'Budget Line Item')}
           onChange={val => handleFilterChange('budgetLineItem', val)}
           placeholder="Filter by Budget Line Item"
         />
         <SearchableDropdown
           value={filters.typeOfPayment}
-          options={getDropdown('Type of Payment')}
+          options={getDropdownValues(dropdownOptions, 'Type of Payment')}
           onChange={val => handleFilterChange('typeOfPayment', val)}
           placeholder="Filter by Type of Payment"
         />
@@ -694,7 +700,7 @@ export default function BudgetDatabase() {
                   <td className="border px-2 py-1 align-top break-words whitespace-pre-wrap">
                     <SearchableDropdown
                       value={row.budgetLineItem}
-                      options={getDropdown('Budget Line Item')}
+                      options={getDropdownValues(dropdownOptions, 'Budget Line Item')}
                       onChange={val => handleChange(idx, 'budgetLineItem', val)}
                       placeholder="Select"
                       disabled={row.status === 'Archived'}
@@ -703,7 +709,7 @@ export default function BudgetDatabase() {
                   <td className="border px-2 py-1 align-top break-words whitespace-pre-wrap">
                     <SearchableDropdown
                       value={row.typeOfPayment}
-                      options={getDropdown('Type of Payment')}
+                      options={getDropdownValues(dropdownOptions, 'Type of Payment')}
                       onChange={val => handleChange(idx, 'typeOfPayment', val)}
                       placeholder="Select"
                       disabled={row.status === 'Archived'}
@@ -712,7 +718,7 @@ export default function BudgetDatabase() {
                   <td className="border px-2 py-1 align-top break-words whitespace-pre-wrap">
                     <SearchableDropdown
                       value={row.categoryInBudget}
-                      options={getDropdown('Category In Budget')}
+                      options={getDropdownValues(dropdownOptions, 'Category In Budget')}
                       onChange={val => handleChange(idx, 'categoryInBudget', val)}
                       placeholder="Select"
                       disabled={row.status === 'Archived'}
@@ -721,7 +727,7 @@ export default function BudgetDatabase() {
                   <td className="border px-2 py-1 align-top break-words whitespace-pre-wrap">
                     <SearchableDropdown
                       value={row.sendingLocation}
-                      options={getDropdown('Sending Location')}
+                      options={getDropdownValues(dropdownOptions, 'Sending Location')}
                       onChange={val => handleChange(idx, 'sendingLocation', val)}
                       placeholder="Select"
                       disabled={row.status === 'Archived'}
@@ -954,7 +960,7 @@ export default function BudgetDatabase() {
               <label className="block text-sm font-medium">Budget Line Item</label>
               <SearchableDropdown
                 value={bulkAdjustValues.budgetLineItem}
-                options={getDropdown('Budget Line Item')}
+                options={getDropdownValues(dropdownOptions, 'Budget Line Item')}
                 onChange={val => setBulkAdjustValues(v => ({ ...v, budgetLineItem: val }))}
                 placeholder="Set Budget Line Item"
               />
@@ -977,21 +983,21 @@ export default function BudgetDatabase() {
               <label className="block text-sm font-medium">Type of Payment</label>
               <SearchableDropdown
                 value={bulkAdjustValues.typeOfPayment}
-                options={getDropdown('Type of Payment')}
+                options={getDropdownValues(dropdownOptions, 'Type of Payment')}
                 onChange={val => setBulkAdjustValues(v => ({ ...v, typeOfPayment: val }))}
                 placeholder="Set Type of Payment"
               />
               <label className="block text-sm font-medium">Category In Budget</label>
               <SearchableDropdown
                 value={bulkAdjustValues.categoryInBudget}
-                options={getDropdown('Category In Budget')}
+                options={getDropdownValues(dropdownOptions, 'Category In Budget')}
                 onChange={val => setBulkAdjustValues(v => ({ ...v, categoryInBudget: val }))}
                 placeholder="Set Category In Budget"
               />
               <label className="block text-sm font-medium">Sending Location</label>
               <SearchableDropdown
                 value={bulkAdjustValues.sendingLocation}
-                options={getDropdown('Sending Location')}
+                options={getDropdownValues(dropdownOptions, 'Sending Location')}
                 onChange={val => setBulkAdjustValues(v => ({ ...v, sendingLocation: val }))}
                 placeholder="Set Sending Location"
               />

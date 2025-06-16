@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthFirebase } from './AuthFirebaseContext';
 import { sendEmailVerification, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from './DatabaseFirebase';
+import { useNavigate } from 'react-router-dom';
 
 export default function AuthFirebaseForm() {
   const { signup, login, user, loading } = useAuthFirebase();
@@ -12,6 +13,13 @@ export default function AuthFirebaseForm() {
   const [submitting, setSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [verifySent, setVerifySent] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user && user.emailVerified) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
