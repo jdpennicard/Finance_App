@@ -25,6 +25,13 @@ export default function EditableTransactionsTable() {
     setRows(rows.filter((_, i) => i !== idx));
   };
 
+  const handleDuplicateRow = (idx: number) => {
+    const rowToDuplicate = rows[idx];
+    const newRows = [...rows];
+    newRows.splice(idx + 1, 0, { ...rowToDuplicate });
+    setRows(newRows);
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full border border-gray-300 bg-white">
@@ -89,7 +96,13 @@ export default function EditableTransactionsTable() {
                   ))}
                 </select>
               </td>
-              <td className="border px-2 py-1 text-center">
+              <td className="border px-2 py-1 text-center space-x-2">
+                <button
+                  className="text-blue-500 hover:underline"
+                  onClick={() => handleDuplicateRow(idx)}
+                >
+                  Duplicate
+                </button>
                 <button
                   className="text-red-500 hover:underline"
                   onClick={() => handleDeleteRow(idx)}

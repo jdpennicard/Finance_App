@@ -883,33 +883,34 @@ export default function BudgetDatabase() {
                 return { oldRow, newRow, conflictField: "indexId" };
               })}
               columns={["budgetLineItem", "typeOfPayment", "categoryInBudget", "sendingLocation", "item", "perMonth", "months", "costForYear", "status"]}
-              onResolve={actions => {
-                // actions: { [indexId]: 'keep' | 'accept' | 'auto' }
-                // Build new pendingRows array based on user choices
+              onResolve={({ actions, identicalAutoAssign }) => {
+                // 1. Handle conflicting duplicates (as before)
                 const overwriteIds = Object.entries(actions)
                   .filter(([_, v]) => v === 'accept')
                   .map(([id]) => parseInt(id, 10));
                 const autoIds = Object.entries(actions)
                   .filter(([_, v]) => v === 'auto')
                   .map(([id]) => parseInt(id, 10));
-                const keepIds = Object.entries(actions)
-                  .filter(([_, v]) => v === 'keep')
-                  .map(([id]) => parseInt(id, 10));
-                // pendingRows: all rows to import
-                // For 'accept', keep as is (will overwrite)
-                // For 'auto', will be re-imported with autoid
-                // For 'keep', skip
+                // 2. Handle identicals: auto-assign new ID if checked
+                const identicalAutoRows = pendingRows.filter(r =>
+                  identicalAutoAssign[parseInt(r[0], 10)]
+                );
+                // 3. Accept/overwrite
                 const acceptRows = pendingRows.filter(r => overwriteIds.includes(parseInt(r[0], 10)));
-                const autoRows = pendingRows.filter(r => autoIds.includes(parseInt(r[0], 10)));
-                // 1. Overwrite selected
+                // 4. Auto-assign (conflicting + identical)
+                const autoRows = [
+                  ...pendingRows.filter(r => autoIds.includes(parseInt(r[0], 10))),
+                  ...identicalAutoRows
+                ];
+                // 5. Overwrite selected
                 if (acceptRows.length > 0) {
                   addParsedRows(acceptRows, 'overwrite');
                 }
-                // 2. Auto-assign selected
+                // 6. Auto-assign selected
                 if (autoRows.length > 0) {
                   addParsedRows(autoRows, 'autoid');
                 }
-                // 3. Remove modal
+                // 7. Remove modal
                 setPendingRows(null);
                 setDuplicateIds([]);
                 setImportConflictMode('none');
