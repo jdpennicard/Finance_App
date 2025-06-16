@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
+import { useDropdownOptions } from '../context/DropdownOptionsContext';
 
 const initialRows = [
   { name: '', type: '', defaultAmount: '' },
 ];
 
-const types = [
-  { value: 'income', label: 'Income' },
-  { value: 'bill', label: 'Bill' },
-  { value: 'sinkingFund', label: 'Sinking Fund' },
-  { value: 'expense', label: 'Expense' },
-];
-
 export default function EditableCategoriesTable() {
   const [rows, setRows] = useState(initialRows);
+  const { options } = useDropdownOptions();
+  // Find the user-configurable type options (adjust the name as needed)
+  const typeOptions = options.find(opt => opt.name === 'Type of Payment')?.values || [];
 
   const handleChange = (idx: number, field: string, value: string) => {
     const updated = rows.map((row, i) =>
@@ -58,8 +55,8 @@ export default function EditableCategoriesTable() {
                   onChange={e => handleChange(idx, 'type', e.target.value)}
                 >
                   <option value="">Select</option>
-                  {types.map(type => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
+                  {typeOptions.map(type => (
+                    <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
               </td>
