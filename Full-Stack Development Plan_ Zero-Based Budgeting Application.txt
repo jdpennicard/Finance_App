@@ -1,0 +1,238 @@
+﻿Full-Stack Development Plan: Zero-Based Budgeting Application
+This plan outlines the recommended technologies, architecture, and a two-phase development approach for your web-based zero-based budgeting application.
+Core Principles & Technology Stack Rationale
+We will focus on a modern, scalable, and developer-friendly stack to ensure efficient development and a robust application.
+* JavaScript/TypeScript Everywhere: Using JavaScript/TypeScript across the frontend and backend (Node.js) allows for code reuse, shared tooling, and a unified development experience, reducing context switching.
+* Managed Services: Leveraging cloud-managed services (like Firebase/Google Cloud) significantly speeds up development, reduces operational overhead, and provides built-in scalability and security.
+* Component-Based UI: React provides a highly efficient way to build complex, interactive user interfaces with reusable components.
+* Utility-First CSS: Tailwind CSS enables rapid UI development with responsive design built-in, making mobile-friendliness a natural outcome.
+* NoSQL Database: Firestore is ideal for its real-time capabilities, flexible schema, and excellent integration with Firebase Authentication and other Google Cloud services.
+Recommended Programming Languages and Frameworks
+* Frontend:
+   * Language: JavaScript (with TypeScript strongly recommended for larger projects)
+   * Framework: React
+   * Styling: Tailwind CSS
+   * UI Components: Shadcn/UI (built on Tailwind and React, for beautiful, accessible components)
+   * Charting: Recharts (a flexible charting library for React)
+   * Icon Library: Lucide React (for modern, customizable icons)
+* Backend:
+   * Language: JavaScript (with TypeScript strongly recommended)
+   * Runtime: Node.js
+   * Framework: Express.js (for building a RESTful API)
+   * Database Integration: Firebase Admin SDK (for secure backend interactions with Firestore)
+* Database:
+   * Solution: Google Cloud Firestore (NoSQL, document-based database)
+* Authentication:
+   * Solution: Firebase Authentication (Handles user login, registration, password management, supporting email/password and potentially social logins later).
+* Deployment & Hosting:
+   * Frontend: Firebase Hosting (Fast, secure, globally distributed CDN)
+   * Backend: Google Cloud Functions (Serverless, scalable execution for your Express API)
+Phase 1: Core Functionality & MVP (Minimum Viable Product)
+This phase focuses on establishing the foundational features required for a functional budgeting application.
+1. Architecture & Setup
+* Project Initialization: Set up a React project (e.g., using Vite or Create React App), a Node.js/Express backend project, and initialize a Firebase project.
+* Database Structure (Firestore):
+   * users Collection: Stores user profiles (linked to Firebase Auth uid).
+      * userId (Document ID, same as Firebase Auth uid)
+      * email
+      * displayName (optional)
+      * createdAt
+   * budgets Collection (artifacts/{appId}/public/data/budgets for shared data): Each document represents a user's budget.
+      * budgetId (Document ID, auto-generated or custom, fulfills 'Index/Budget ID' concept for the budget itself)
+      * ownerId (UID of the primary owner, allowing a primary owner model)
+      * memberIds (Array of objects containing userId and permissionLevel: "view" | "edit")
+      * name (e.g., "Monthly Budget - June 2025")
+      * startDate, endDate
+      * totalBudgetedIncome
+      * totalBudgetedExpenses
+      * balanceForward (optional, for carrying over from previous periods)
+      * enableRollover (boolean, controls whether unallocated funds roll over to next month)
+      * createdAt
+      * Note on Sharing: In-application logic will be required to manage memberIds and control which users can view/edit specific budgets. Firestore security rules will ensure only authenticated users can access the public/data path.
+   * categories Collection (subcollection under budgets - serves as the "overall database" of budget line items):
+      * This collection will act as your master list of "live line items" that users can call on.
+      * categoryId (Document ID, can be user-defined for 'Index/Budget ID' if unique, or an auto-generated ID with a separate userDefinedIndex field)
+      * name (e.g., "Rent", "Groceries", "Utilities", "Jake's Salary")
+      * type ("income", "bill", "sinkingFund", "expense")
+      * defaultBudgetedAmount (Number, a default value for zero-based budgeting, this acts as the "Normal" value for recurring items)
+      * paymentRegularity (String, e.g., "monthly", "annually", "one-time", "weekly", "bi-weekly" - corresponds to 'Payment Regularity' field)
+      * description (String, additional context for the line item)
+      * paymentType (String, default 'Type of Payment' for this category)
+      * sendingLocation (String, default 'Sending Location' for this category)
+      * status (String, e.g., "active", "inactive" - corresponds to 'Status' for categories)
+   * monthlyAllocations Collection (subcollection under budgets for month-specific budgeted values):
+      * This collection will store the specific budgeted amounts for each category for a given month/year, allowing for overrides.
+      * allocationId (Document ID, e.g., YYYY-MM or a unique ID)
+      * month (Number, e.g., 7 for July)
+      * year (Number, e.g., 2023)
+      * categoryId (Foreign key to categories collection)
+      * budgetedAmount (Number, the actual budgeted amount for this category in this month)
+      * manualOvertype (Number, optional, stores the value if a manual override occurred for this month)
+      * isRollover (boolean, indicates if this allocation is from a previous month's rollover)
+      * rolloverSourceMonth (Number, optional, the month this rollover came from)
+      * rolloverSourceYear (Number, optional, the year this rollover came from)
+      * createdAt
+   * transactions Collection (subcollection under budgets):
+      * transactionId (Document ID)
+      * userId (Foreign key to users collection - the user who entered the transaction)
+      * budgetId (Foreign key to budgets collection)
+      * date (Timestamp - 'Transaction Date' as implied by core requirements)
+      * categoryId (Foreign key to categories collection - corresponds to 'Category In Budget')
+      * budgetItemName (String, specific line item if different from category name)
+      * description (String, free-form text for 'Item' details)
+      * amount (Number, actual transaction amount)
+      * type ("income", "expense")
+      * paymentType (String, e.g., "Credit Card", "Debit Card", "Cash", "Bank Transfer" - corresponds to 'Type of Payment')
+      * sendingLocation (String, e.g., "Online", "Store Name", "Person's Name" - corresponds to 'Sending Location')
+      * status (String, e.g., "pending", "cleared", "reconciled" - corresponds to 'Status' for transactions)
+      * createdAt
+      * Note on 'Cost for Year': This will be a calculated field on the frontend or backend based on defaultBudgetedAmount (from categories) and paymentRegularity, and will not be stored directly in the database.
+   * dropdownOptions Collection (subcollection under budgets for user/budget-specific configurable lists):
+      * This collection will hold documents for each type of dropdown list that users can customize. Each document ID will represent the type of list (e.g., 'paymentTypes', 'sendingLocations').
+      * dropdownListId (Document ID, e.g., "paymentTypes", "transactionStatuses")
+      * options (Array of Strings: ["Option 1", "Option 2", "Custom Option"])
+      * Examples of documents in this collection:
+         * budgets/{budgetId}/dropdownOptions/paymentTypes with options: ["Credit Card", "Debit Card", "Cash", "Bank Transfer"]
+         * budgets/{budgetId}/dropdownOptions/sendingLocations with options: ["Online", "Grocery Store A", "Restaurant B"]
+         * budgets/{budgetId}/dropdownOptions/transactionStatuses with options: ["Pending", "Cleared", "Reconciled"]
+         * budgets/{budgetId}/dropdownOptions/paymentRegularities with options: ["Monthly", "Annually", "One-Time", "Weekly", "Bi-Weekly"]
+* Firebase Authentication Rules: Set up basic security rules for Firestore to allow authenticated users to read and write data in the users and public/data/budgets collections, including their subcollections.
+2. User Authentication (Frontend & Backend)
+* Frontend (Reaczt):
+   * User registration, login, and logout forms.
+   * Session management using Firebase Authentication SDK.
+   * Protected routes that only authenticated users can access.
+* Backend (Node.js/Express):
+   * Middleware to verify Firebase ID tokens for all API requests, ensuring only authenticated users can interact with their data.
+3. Manual Transaction Input
+* Frontend (React):
+   * Forms to add new income, bill, and sinking fund transactions.
+   * Input fields for: transaction date (date picker), category (dropdown, dynamically loaded from DB), description, amount.
+   * Dropdown options for 'Budget Line Item' (from categories names), 'Type of Payment', 'Sending Location', and 'Status' will be dynamically loaded from the dropdownOptions collection specific to the current budget.
+   * Validation for inputs.
+* Backend (Node.js/Express):
+   * API endpoints (e.g., POST /api/transactions) to receive transaction data.
+   * Data validation and sanitization.
+   * Save transaction data to Firestore (transactions collection).
+4. Category Management (The "Overall Database" of Line Items)
+* Frontend (React):
+   * A dedicated "Line Items" or "Categories" screen where users can view, add, edit, and delete their master list of budget categories (income, bills, sinking funds, expenses).
+   * This acts as the "overall database" of live line items.
+   * Input for category name, type, and a defaultBudgetedAmount.
+   * Dropdown options for 'Payment Regularity' and 'Status' will be dynamically loaded from the dropdownOptions collection.
+* Backend (Node.js/Express):
+   * API endpoints (e.g., GET /api/categories, POST /api/categories, PUT /api/categories/:id, DELETE /api/categories/:id) to manage category data in Firestore.
+5. User-Configurable Dropdown Options
+* Frontend (React):
+   * A "Manage Fields" or "Settings" screen where users can view, add, edit, and delete options for the various dropdowns (e.g., 'Type of Payment', 'Sending Location', 'Transaction Statuses', 'Payment Regularities').
+   * This screen will dynamically display the lists from the dropdownOptions collection for the active budget.
+   * Ability to add new custom options, modify existing ones, and remove options.
+* Backend (Node.js/Express):
+   * New API endpoints (e.g., GET /api/dropdown-options/:listType, POST /api/dropdown-options/:listType, PUT /api/dropdown-options/:listType, DELETE /api/dropdown-options/:listType/:optionValue) to manage these lists within the dropdownOptions subcollection under the relevant budget.
+   * Robust validation to prevent empty options or duplicates.
+6. Dedicated Monthly Planning Tabs (Salaries, Monthly Bills, Sinking Funds)
+* Frontend (React):
+   * Salaries Tab:
+      * Dedicated page/tab for managing income (categories with type: "income").
+      * Month/Year Selection: User can select the specific month and year for which they are adjusting budgets.
+      * Dynamic Population: When a month/year is selected, the system fetches all income categories and their corresponding monthlyAllocations for that period.
+      * Input Fields: Display 'Index/Budget ID' (from categoryId or userDefinedIndex), 'Budget Line Item' (from category.name), 'Type of Payment', 'Category In Budget', 'Sending Location', 'Item'.
+      * "Normal" Column: Display category.defaultBudgetedAmount (this is the base/expected value for that line item).
+      * "Manual Overtype" Column: An editable input field that, if populated, will be used to set the monthlyAllocations.manualOvertype for that categoryId for the selected month/year.
+      * "Final Col" (Calculated): This column will dynamically display the final budgeted amount for that month: monthlyAllocations.manualOvertype if present, otherwise monthlyAllocations.budgetedAmount (which would default to category.defaultBudgetedAmount if no monthlyAllocation exists or no manual override was set).
+      * Filtering: Implement robust filtering options (e.g., by Budget Line Item, Status, Payment Regularity).
+   * Monthly Bills/Recurring Payments Tab:
+      * Dedicated page/tab for managing bills and recurring expenses (categories with type: "bill").
+      * Functionality mirroring the Salaries tab for month/year selection, dynamic population, "Normal", "Manual Overtype", and "Final Col" based on monthlyAllocations.
+      * Filtering options specific to bills.
+   * Sinking Funds Tab:
+      * Dedicated page/tab for managing sinking funds (categories with type: "sinkingFund").
+      * Functionality mirroring the Salaries tab for month/year selection, dynamic population, "Normal", "Manual Overtype", and "Final Col" based on monthlyAllocations.
+      * Filtering options specific to sinking funds.
+   * "Copy to Next Month" Feature: A prominent button or action available on these planning tabs. When triggered, it will:
+      * Copy the monthlyAllocations (including any manualOvertype values) from the currently selected month/year to the next month.
+      * If no monthlyAllocation exists for the next month, it will create one for each category, using the budgetedAmount from the copied month.
+      * This operation will primarily affect the monthlyAllocations collection.
+* Backend (Node.js/Express):
+   * New API endpoints to fetch and update monthlyAllocations for a specific budget and month/year (e.g., GET /api/budgets/:budgetId/allocations/:year/:month, PUT /api/budgets/:budgetId/allocations/:year/:month).
+   * API endpoint for the "Copy to Next Month" feature (POST /api/budgets/:budgetId/copy-allocations-to-next-month). This endpoint will handle the logic of querying current month's allocations, calculating next month's, and batch writing them to Firestore.
+7. Budgeted vs. Actual Tracking
+* Frontend (React):
+   * Dashboard view displaying categories with their budgeted amount (now derived from monthlyAllocations for the current period), actual spending, and remaining budget.
+   * This will involve fetching all transactions and monthlyAllocations for the current budget period.
+   * Client-side aggregation to sum actual spending per category and calculate remaining budget.
+   * Real-time Updates: Use Firestore's onSnapshot listeners to update the UI instantly as transactions are added or modified.
+8. Dashboard & Reporting (Basic)
+* Frontend (React):
+   * Spending Trends: A simple line or bar chart (using Recharts) showing spending over time (e.g., daily, weekly, or monthly totals).
+   * Remaining Budget: A visual indicator (e.g., a progress bar or pie chart) showing the overall remaining budget for the current period.
+   * Display a list of recent transactions.
+   * Filtering: Enhanced filtering options across dashboards and transaction lists.
+Phase 2: Enhancements & Mobile Optimization
+This phase builds upon the core functionality, focusing on user experience, convenience, and advanced features.
+1. Mobile-Friendliness
+* Frontend (React & Tailwind CSS):
+   * Responsive Design: Since Tailwind CSS is used with its mobile-first approach and responsive utilities (sm:, md:, lg:), the application's layout, typography, and component sizing will naturally adapt to various screen sizes.
+   * Touch Optimization: Ensure buttons and interactive elements have sufficient touch target sizes.
+   * Navigation: Implement responsive navigation patterns (e.g., a hamburger menu on mobile).
+   * Testing: Thorough testing on various mobile devices and emulators.
+2. CSV Import
+* Frontend (React):
+   * UI for users to upload a CSV file.
+   * Option to map CSV columns to transaction fields (date, description, amount, category).
+   * Preview of parsed data before import confirmation.
+* Backend (Node.js/Express):
+   * API endpoint (POST /api/import-csv) to receive the uploaded CSV file.
+   * Use a library (e.g., csv-parser) to parse the CSV.
+   * Robust validation of CSV data.
+   * Batch writing transactions to Firestore for efficiency.
+   * Error handling for malformed CSVs or invalid data.
+3. Credit Card Reconciliation (Manual)
+* Frontend (React):
+   * A dedicated "Reconciliation" view.
+   * Users can mark transactions as "reconciled" (e.g., by clicking a checkbox next to each transaction).
+   * Filter options to show only unreconciled transactions.
+* Backend (Node.js/Express):
+   * The status field on the transactions collection will be used to manage reconciliation states (e.g., "pending", "cleared", "reconciled").
+   * API endpoints to update the status of transactions.
+* Note on Automated Credit Card Reconciliation: True automated reconciliation (connecting to bank accounts via APIs like Plaid, Yodlee, or Salt Edge) is a significant undertaking involving compliance, security, and often paid API subscriptions. While powerful, it might be considered a Phase 3 feature due to its complexity and external dependencies. This plan assumes a manual reconciliation feature where users visually check off transactions against their statements.
+4. Advanced Dashboard & Reporting
+* Frontend (React & Recharts):
+   * Category Breakdown: Detailed pie charts or bar charts showing spending distribution across categories.
+   * Historical Trends: Ability to view spending and budget data for previous months/years.
+   * Projections: Simple future projections based on recurring expenses and average spending.
+   * Customizable Reports: Allowing users to filter and sort transactions and export basic reports (e.g., to PDF/CSV).
+5. Data Export & Backup
+* Frontend (React):
+   * Export to Excel:
+      * Button to export current budget data to Excel format
+      * Options to select date range and data types (transactions, categories, allocations)
+      * Preview of data before export
+   * Backup Management:
+      * Automatic daily backups of user data
+      * Manual backup trigger option
+      * Backup history view
+      * Restore from backup functionality
+* Backend (Node.js/Express):
+   * Excel Export:
+      * API endpoint (GET /api/export/excel) to generate Excel files
+      * Use library like exceljs for Excel file generation
+      * Proper formatting and styling of exported data
+   * Backup System:
+      * Scheduled backup job using Google Cloud Functions
+      * Store backups in Google Cloud Storage
+      * API endpoints for backup management (GET /api/backups, POST /api/backups/restore)
+      * Data validation and integrity checks during backup/restore
+
+6. Budget Rollover Management
+* Frontend (React):
+   * Settings toggle for enabling/disabling automatic rollover
+   * Visual indicator for rollover amounts in monthly planning
+   * Clear labeling of rollover line items (e.g., "January 2025 Rollover")
+* Backend (Node.js/Express):
+   * Automatic rollover calculation at month end
+   * API endpoint for manual rollover trigger
+   * Rollover amount validation and tracking
+   * Historical rollover tracking
+
+This plan provides a solid roadmap for developing your zero-based budgeting application, focusing on a robust, scalable, and user-friendly experience.
