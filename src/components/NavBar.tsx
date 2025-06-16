@@ -1,14 +1,28 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuthFirebase } from '../firebase/AuthFirebaseContext';
 
 export default function NavBar() {
+  const { user, logout } = useAuthFirebase();
+
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 py-2 flex gap-6">
-      <Link className="font-semibold text-gray-700 hover:text-blue-600" to="/">Dashboard</Link>
-      <Link className="font-semibold text-gray-700 hover:text-blue-600" to="/budget-database">Budget Database</Link>
-      <Link className="font-semibold text-gray-700 hover:text-blue-600" to="/transactions">Transactions</Link>
-      <Link className="font-semibold text-gray-700 hover:text-blue-600" to="/categories">Categories</Link>
-      <Link className="font-semibold text-gray-700 hover:text-blue-600" to="/settings">Settings</Link>
+    <nav className="flex items-center justify-between px-4 py-2 bg-gray-800 text-white">
+      <div className="font-bold text-lg">Finance App</div>
+      <div>
+        {user ? (
+          <>
+            <span className="mr-4">{user.email}</span>
+            <button
+              className="bg-red-500 px-3 py-1 rounded hover:bg-red-600"
+              onClick={logout}
+            >
+              Log Out
+            </button>
+          </>
+        ) : (
+          <a href="/login" className="bg-blue-500 px-3 py-1 rounded hover:bg-blue-600">Log In</a>
+        )}
+      </div>
     </nav>
   );
 } 

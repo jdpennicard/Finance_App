@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { useDropdownOptions } from '../context/DropdownOptionsContext';
 
 const initialRows = [
-  { name: '', type: '', defaultAmount: '' },
+  { name: '', type: '', categoryInBudget: '', sendingLocation: '', defaultAmount: '' },
 ];
 
 export default function EditableCategoriesTable() {
   const [rows, setRows] = useState(initialRows);
   const { options } = useDropdownOptions();
-  // Find the user-configurable type options (adjust the name as needed)
   const typeOptions = options.find(opt => opt.name === 'Type of Payment')?.values || [];
+  const categoryOptions = options.find(opt => opt.name === 'Category In Budget')?.values || [];
+  const sendingLocationOptions = options.find(opt => opt.name === 'Sending Location')?.values || [];
 
   const handleChange = (idx: number, field: string, value: string) => {
     const updated = rows.map((row, i) =>
@@ -19,7 +20,7 @@ export default function EditableCategoriesTable() {
   };
 
   const handleAddRow = () => {
-    setRows([...rows, { name: '', type: '', defaultAmount: '' }]);
+    setRows([...rows, { name: '', type: '', categoryInBudget: '', sendingLocation: '', defaultAmount: '' }]);
   };
 
   const handleDeleteRow = (idx: number) => {
@@ -33,6 +34,8 @@ export default function EditableCategoriesTable() {
           <tr className="bg-gray-100">
             <th className="border px-2 py-1">Name</th>
             <th className="border px-2 py-1">Type</th>
+            <th className="border px-2 py-1">Category In Budget</th>
+            <th className="border px-2 py-1">Sending Location</th>
             <th className="border px-2 py-1">Default Amount</th>
             <th className="border px-2 py-1">Actions</th>
           </tr>
@@ -57,6 +60,30 @@ export default function EditableCategoriesTable() {
                   <option value="">Select</option>
                   {typeOptions.map(type => (
                     <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </td>
+              <td className="border px-2 py-1">
+                <select
+                  className="w-full border rounded px-1 py-0.5"
+                  value={row.categoryInBudget}
+                  onChange={e => handleChange(idx, 'categoryInBudget', e.target.value)}
+                >
+                  <option value="">Select</option>
+                  {categoryOptions.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </td>
+              <td className="border px-2 py-1">
+                <select
+                  className="w-full border rounded px-1 py-0.5"
+                  value={row.sendingLocation}
+                  onChange={e => handleChange(idx, 'sendingLocation', e.target.value)}
+                >
+                  <option value="">Select</option>
+                  {sendingLocationOptions.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
                   ))}
                 </select>
               </td>
